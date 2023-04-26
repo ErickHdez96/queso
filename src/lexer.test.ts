@@ -2,10 +2,10 @@ import { tokenize_str } from "./lexer";
 import { eoftok, idtok, kwtok, littok, numtok } from "./token";
 
 test("tokenize_str simple tokens", () => {
-  expect(tokenize_str("()")).toEqual([
+  expect(tokenize_str("( )")).toEqual([
     littok(0, 1, "("),
-    littok(1, 2, ")"),
-    eoftok(1, 2),
+    littok(2, 3, ")"),
+    eoftok(2, 3),
   ]);
 });
 

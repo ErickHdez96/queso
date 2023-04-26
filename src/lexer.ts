@@ -69,6 +69,7 @@ const skip_trivia = (l: Lexer) => {
       case "\n":
       case "\r":
       case "\t":
+      case " ":
         next(l);
         break;
     }

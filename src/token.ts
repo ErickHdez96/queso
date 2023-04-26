@@ -81,4 +81,19 @@ export type Token =
   | EofToken
   | NumberToken;
 
+export const token_kind_string = (t: Token): string => {
+  switch (t.kind) {
+    case "literal":
+    case "keyword":
+    case "unknown":
+      return t.value;
+    case "number":
+      return "number";
+    case "id":
+      return "identifier";
+    case "eof":
+      return "<eof>";
+  }
+};
+
 export type TokenKind = Token["kind"];
