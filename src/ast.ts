@@ -13,7 +13,7 @@ export interface DefineItem {
   body: Expr;
 }
 
-export type Expr = NumberExpr | IdExpr | LambdaExpr;
+export type Expr = NumberExpr | IdExpr | ApplicationExpr | LambdaExpr;
 
 export interface NumberExpr {
   kind: "number";
@@ -25,6 +25,13 @@ export interface IdExpr {
   kind: "id";
   span: Span;
   value: string;
+}
+
+export interface ApplicationExpr {
+  kind: "application";
+  span: Span;
+  fn: Expr;
+  arguments: Expr[];
 }
 
 export interface LambdaExpr {

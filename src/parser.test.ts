@@ -52,3 +52,34 @@ test("parse_str lambda", () => {
     ],
   });
 });
+
+test("parse_str application", () => {
+  expect(parse_str("(define a (id 1))")).toEqual({
+    span: span(0, 17),
+    items: [
+      {
+        span: span(0, 17),
+        name: {
+          span: span(8, 9),
+          value: "a",
+        },
+        body: {
+          kind: "application",
+          span: span(10, 16),
+          fn: {
+            kind: "id",
+            span: span(11, 13),
+            value: "id",
+          },
+          arguments: [
+            {
+              kind: "number",
+              span: span(14, 15),
+              value: "1",
+            },
+          ],
+        },
+      },
+    ],
+  });
+});

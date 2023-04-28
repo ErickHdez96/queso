@@ -102,6 +102,25 @@ function parse_expr(p: Parser): Expr {
         body,
       };
     }
+    if (can_start_expression(t)) {
+      const fn = parse_expr(p);
+      const args: Expr[] = [];
+      for (;;) {
+        t = peek(p);
+        if (at_eof(p) || (t.kind === "literal" && t.value === ")")) {
+          break;
+        }
+        const arg = parse_expr(p);
+        args.push(arg);
+      }
+      const end = expect_lit(p, ")").span;
+      return {
+        kind: "application",
+        span: span(start.lo, end.hi),
+        fn,
+        arguments: args,
+      };
+    }
   }
   throw new Todo();
 }
@@ -146,4 +165,16 @@ const next = (p: Parser) => {
   const t = peek(p);
   if (!at_eof(p)) p.offset += 1;
   return t;
+};
+
+const can_start_expression = (t: Token): boolean => {
+  switch (t.kind) {
+    case "literal":
+      return t.value === "(";
+    case "number":
+    case "id":
+      return true;
+    default:
+      return false;
+  }
 };
