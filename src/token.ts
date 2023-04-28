@@ -17,6 +17,8 @@ export const littok = (lo: number, hi: number, value: string): LitToken => ({
 
 export const Keyword = {
   define: "define",
+  lambda: "lambda",
+  λ: "λ",
 } as const;
 export type Keyword = (typeof Keyword)[keyof typeof Keyword];
 

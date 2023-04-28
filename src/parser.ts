@@ -49,13 +49,59 @@ function parse_item(p: Parser): Item {
 }
 
 function parse_expr(p: Parser): Expr {
-  const t = peek(p);
+  let t = peek(p);
   if (t.kind === "number") {
     next(p);
     return {
+      kind: "number",
       span: t.span,
       value: t.value,
     };
+  }
+  if (t.kind === "id") {
+    next(p);
+    return {
+      kind: "id",
+      span: t.span,
+      value: t.value,
+    };
+  }
+  if (t.kind === "literal" && t.value === "(") {
+    const start = next(p).span;
+    t = peek(p);
+    if (
+      t.kind === "keyword" &&
+      (t.value === Keyword.lambda || t.value === Keyword.λ)
+    ) {
+      next(p);
+      expect_lit(p, "(");
+      const params: Ident[] = [];
+      for (;;) {
+        t = peek(p);
+        if (at_eof(p) || (t.kind === "literal" && t.value === ")")) {
+          break;
+        }
+        const ident = expect_id(p);
+        params.push(ident);
+      }
+      expect_lit(p, ")");
+      const body: Expr[] = [];
+      for (;;) {
+        t = peek(p);
+        if (at_eof(p) || (t.kind === "literal" && t.value === ")")) {
+          break;
+        }
+        const expr = parse_expr(p);
+        body.push(expr);
+      }
+      const end = expect_lit(p, ")").span;
+      return {
+        kind: "lambda",
+        span: span(start.lo, end.hi),
+        parameters: params,
+        body,
+      };
+    }
   }
   throw new Todo();
 }

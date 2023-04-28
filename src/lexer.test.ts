@@ -18,5 +18,10 @@ test("tokenize_str identifiers", () => {
 });
 
 test("tokenize_str keywords", () => {
-  expect(tokenize_str("define")).toEqual([kwtok(0, 6, "define"), eoftok(0, 6)]);
+  expect(tokenize_str("define lambda λ")).toEqual([
+    kwtok(0, 6, "define"),
+    kwtok(7, 13, "lambda"),
+    kwtok(14, 15, "λ"),
+    eoftok(14, 15),
+  ]);
 });
