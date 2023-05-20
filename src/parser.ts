@@ -36,6 +36,7 @@ function parse_item(p: Parser): Item {
     const body = parse_expr(p);
     const end = expect_lit(p, ")").span;
     return {
+      kind: "define",
       span: span(start.lo, end.hi),
       name,
       body,
@@ -50,6 +51,14 @@ function parse_item(p: Parser): Item {
 
 function parse_expr(p: Parser): Expr {
   let t = peek(p);
+  if (t.kind === "literal" && (t.value === "#t" || t.value === "#f")) {
+    next(p);
+    return {
+      kind: "boolean",
+      span: t.span,
+      value: t.value === "#t",
+    };
+  }
   if (t.kind === "number") {
     next(p);
     return {
@@ -95,11 +104,23 @@ function parse_expr(p: Parser): Expr {
         body.push(expr);
       }
       const end = expect_lit(p, ")").span;
+      const retexpr = body.splice(body.length - 1, 1)[0] ?? {
+        kind: "unit",
+        span: span(start.lo, end.hi),
+      };
       return {
         kind: "lambda",
         span: span(start.lo, end.hi),
         parameters: params,
         body,
+        retexpr,
+      };
+    }
+    if (t.kind === "literal" && t.value === ")") {
+      const end = next(p).span;
+      return {
+        kind: "unit",
+        span: span(start.lo, end.hi),
       };
     }
     if (can_start_expression(t)) {

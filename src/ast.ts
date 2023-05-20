@@ -8,12 +8,30 @@ export interface Mod {
 export type Item = DefineItem;
 
 export interface DefineItem {
+  kind: "define";
   span: Span;
   name: Ident;
   body: Expr;
 }
 
-export type Expr = NumberExpr | IdExpr | ApplicationExpr | LambdaExpr;
+export type Expr =
+  | UnitExpr
+  | BooleanExpr
+  | NumberExpr
+  | IdExpr
+  | ApplicationExpr
+  | LambdaExpr;
+
+export interface UnitExpr {
+  kind: "unit";
+  span: Span;
+}
+
+export interface BooleanExpr {
+  kind: "boolean";
+  span: Span;
+  value: boolean;
+}
 
 export interface NumberExpr {
   kind: "number";
@@ -39,6 +57,7 @@ export interface LambdaExpr {
   span: Span;
   parameters: Ident[];
   body: Expr[];
+  retexpr: Expr;
 }
 
 export interface Ident {

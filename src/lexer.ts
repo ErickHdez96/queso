@@ -26,6 +26,21 @@ export function tokenize_str(input: string): Token[] {
         tok = { span: span(lo, l.offset), kind: "literal", value: c };
         break;
       }
+      case "#": {
+        const t = peek(l);
+        if (t === "t" && is_delimiter(peekn(l, 1))) {
+          next(l);
+          tok = { span: span(lo, l.offset), kind: "literal", value: "#t" };
+          break;
+        } else if (t === "f" && is_delimiter(peekn(l, 1))) {
+          next(l);
+          tok = { span: span(lo, l.offset), kind: "literal", value: "#f" };
+          break;
+        } else {
+          tok = { span: span(lo, l.offset), kind: "unknown", value: c };
+          break;
+        }
+      }
       default: {
         if (is_number(c)) {
           const value = eat_number(l, lo);
@@ -58,6 +73,7 @@ export function tokenize_str(input: string): Token[] {
 
 const at_eof = (l: Lexer) => l.offset >= l.input.length;
 const peek = (l: Lexer) => l.input.charAt(l.offset) || "\0";
+const peekn = (l: Lexer, n: number) => l.input.charAt(l.offset + n) || "\0";
 const next = (l: Lexer) => {
   if (at_eof(l)) return "\0";
   l.offset += 1;
@@ -65,16 +81,28 @@ const next = (l: Lexer) => {
 };
 const skip_trivia = (l: Lexer) => {
   while (!at_eof(l)) {
-    switch (peek(l)) {
-      case "\n":
-      case "\r":
-      case "\t":
-      case " ":
-        next(l);
-        break;
+    if (is_trivia(peek(l))) {
+      next(l);
+      continue;
     }
     return;
   }
+};
+
+const is_trivia = (c: string) => {
+  switch (c) {
+    case " ":
+    case "\t":
+    case "\n":
+    case "\r":
+    case "\0":
+      return true;
+  }
+  return false;
+};
+
+const is_delimiter = (c: string) => {
+  return !is_ident(c);
 };
 
 const is_number = (c: string) => {

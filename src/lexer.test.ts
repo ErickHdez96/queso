@@ -17,6 +17,14 @@ test("tokenize_str identifiers", () => {
   expect(tokenize_str("hola")).toEqual([idtok(0, 4, "hola"), eoftok(0, 4)]);
 });
 
+test("tokenize_str literals", () => {
+  expect(tokenize_str("#t #f")).toEqual([
+    littok(0, 2, "#t"),
+    littok(3, 5, "#f"),
+    eoftok(3, 5),
+  ]);
+});
+
 test("tokenize_str keywords", () => {
   expect(tokenize_str("define lambda λ")).toEqual([
     kwtok(0, 6, "define"),
