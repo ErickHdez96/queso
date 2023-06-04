@@ -294,6 +294,28 @@ function build_builtin_values(): ValEnv {
         },
       },
     },
+    iszero: {
+      ty: {
+        kind: "forall",
+        generics: [],
+        scheme: {
+          kind: "fn",
+          parameters: [Types.number],
+          result: Types.boolean,
+        },
+      },
+    },
+    and: {
+      ty: {
+        kind: "forall",
+        generics: [],
+        scheme: {
+          kind: "fn",
+          parameters: [Types.boolean, Types.boolean],
+          result: Types.boolean,
+        },
+      },
+    },
   };
   return builtin_values;
 }

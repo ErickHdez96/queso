@@ -281,4 +281,199 @@ describe("lower_mod lambda inference", () => {
 
     expect(mod).toEqual(expected_mod);
   });
+
+  test("(and (iszero (+ (id x) 1)) y)", () => {
+    const [_tenv, venv, mod] = lmod(`
+      (define id (λ (x) x))
+      (define a (λ (x y)
+                  (and (iszero (+ (id x) 1))
+                       (id y))))`);
+    const id = venv.get("id")!;
+    expect(id).toBeDefined();
+    expect(id.ty).toHaveProperty("generics");
+    expect((id.ty as TyScheme).generics).toHaveLength(1);
+    const g = (id.ty as TyScheme).generics[0]!;
+
+    const l = venv.get("a")!;
+    expect(l).toBeDefined();
+    expect(l.ty).toHaveProperty("generics");
+    expect((l.ty as TyScheme).generics).toHaveLength(0);
+
+    const expected_mod: hir.Mod = {
+      span: span(7, 131),
+      items: [
+        {
+          kind: "define",
+          name: {
+            span: span(15, 17),
+            value: "id",
+          },
+          span: span(7, 28),
+          body: {
+            kind: "function",
+            span: span(18, 27),
+            ty: {
+              kind: "forall",
+              generics: [g],
+              scheme: {
+                kind: "fn",
+                parameters: [{ kind: "var", id: g }],
+                result: { kind: "var", id: g },
+              },
+            },
+            parameters: [
+              [
+                {
+                  span: span(22, 23),
+                  value: "x",
+                },
+                {
+                  kind: "var",
+                  id: g,
+                },
+              ],
+            ],
+            body: [],
+            retexpr: {
+              kind: "id",
+              span: span(25, 26),
+              ty: { kind: "var", id: g },
+              value: "x",
+            },
+          },
+        },
+        {
+          kind: "define",
+          name: {
+            span: span(43, 44),
+            value: "a",
+          },
+          span: span(35, 131),
+          body: {
+            kind: "function",
+            span: span(45, 130),
+            body: [],
+            ty: {
+              kind: "forall",
+              generics: [],
+              scheme: {
+                kind: "fn",
+                parameters: [Types.number, Types.boolean],
+                result: Types.boolean,
+              },
+            },
+            parameters: [
+              [{ span: span(49, 50), value: "x" }, Types.number],
+              [{ span: span(51, 52), value: "y" }, Types.boolean],
+            ],
+            retexpr: {
+              kind: "application",
+              fn: {
+                kind: "id",
+                span: span(73, 76),
+                value: "and",
+                ty: {
+                  kind: "fn",
+                  parameters: [Types.boolean, Types.boolean],
+                  result: Types.boolean,
+                },
+              },
+              span: span(72, 129),
+              args: [
+                {
+                  kind: "application",
+                  span: span(77, 98),
+                  ty: Types.boolean,
+                  fn: {
+                    kind: "id",
+                    span: span(78, 84),
+                    value: "iszero",
+                    ty: {
+                      kind: "fn",
+                      parameters: [Types.number],
+                      result: Types.boolean,
+                    },
+                  },
+                  args: [
+                    {
+                      kind: "application",
+                      span: span(85, 97),
+                      ty: Types.number,
+                      fn: {
+                        kind: "id",
+                        span: span(86, 87),
+                        ty: {
+                          kind: "fn",
+                          parameters: [Types.number, Types.number],
+                          result: Types.number,
+                        },
+                        value: "+",
+                      },
+                      args: [
+                        {
+                          kind: "application",
+                          span: span(88, 94),
+                          ty: Types.number,
+                          fn: {
+                            kind: "id",
+                            span: span(89, 91),
+                            ty: {
+                              kind: "fn",
+                              parameters: [Types.number],
+                              result: Types.number,
+                            },
+                            value: "id",
+                          },
+                          args: [
+                            {
+                              kind: "id",
+                              span: span(92, 93),
+                              ty: Types.number,
+                              value: "x",
+                            },
+                          ],
+                        },
+                        {
+                          kind: "number",
+                          span: span(95, 96),
+                          ty: Types.number,
+                          value: "1",
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  kind: "application",
+                  span: span(122, 128),
+                  ty: Types.boolean,
+                  fn: {
+                    kind: "id",
+                    span: span(123, 125),
+                    ty: {
+                      kind: "fn",
+                      parameters: [Types.boolean],
+                      result: Types.boolean,
+                    },
+                    value: "id",
+                  },
+                  args: [
+                    {
+                      kind: "id",
+                      span: span(126, 127),
+                      ty: Types.boolean,
+                      value: "y",
+                    },
+                  ],
+                },
+              ],
+              ty: Types.boolean,
+            },
+          },
+        },
+      ],
+    };
+
+    expect(mod).toEqual(expected_mod);
+  });
 });
