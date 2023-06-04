@@ -476,4 +476,120 @@ describe("lower_mod lambda inference", () => {
 
     expect(mod).toEqual(expected_mod);
   });
+
+  test("(id x)", () => {
+    const [_tenv, venv, mod] = lmod(`
+      (define id (λ (x) x))
+      (define a (λ (x) (id x)))`);
+    const id = venv.get("id")!;
+    expect(id).toBeDefined();
+    expect(id.ty).toHaveProperty("generics");
+    expect((id.ty as TyScheme).generics).toHaveLength(1);
+    const g = (id.ty as TyScheme).generics[0]!;
+
+    const l = venv.get("a")!;
+    expect(l).toBeDefined();
+    expect(l.ty).toHaveProperty("generics");
+    expect((l.ty as TyScheme).generics).toHaveLength(1);
+    const h = (l.ty as TyScheme).generics[0]!;
+
+    const expected_mod: hir.Mod = {
+      span: span(7, 60),
+      items: [
+        {
+          kind: "define",
+          name: {
+            span: span(15, 17),
+            value: "id",
+          },
+          span: span(7, 28),
+          body: {
+            kind: "function",
+            span: span(18, 27),
+            ty: {
+              kind: "forall",
+              generics: [g],
+              scheme: {
+                kind: "fn",
+                parameters: [{ kind: "var", id: g }],
+                result: { kind: "var", id: g },
+              },
+            },
+            parameters: [
+              [
+                {
+                  span: span(22, 23),
+                  value: "x",
+                },
+                {
+                  kind: "var",
+                  id: g,
+                },
+              ],
+            ],
+            body: [],
+            retexpr: {
+              kind: "id",
+              span: span(25, 26),
+              ty: { kind: "var", id: g },
+              value: "x",
+            },
+          },
+        },
+        {
+          kind: "define",
+          name: {
+            span: span(43, 44),
+            value: "a",
+          },
+          span: span(35, 60),
+          body: {
+            kind: "function",
+            span: span(45, 59),
+            body: [],
+            ty: {
+              kind: "forall",
+              generics: [h],
+              scheme: {
+                kind: "fn",
+                parameters: [{ kind: "var", id: h }],
+                result: { kind: "var", id: h },
+              },
+            },
+            parameters: [
+              [
+                { span: span(49, 50), value: "x" },
+                { kind: "var", id: h },
+              ],
+            ],
+            retexpr: {
+              kind: "application",
+              fn: {
+                kind: "id",
+                span: span(53, 55),
+                value: "id",
+                ty: {
+                  kind: "fn",
+                  parameters: [{ kind: "var", id: h }],
+                  result: { kind: "var", id: h },
+                },
+              },
+              span: span(52, 58),
+              args: [
+                {
+                  kind: "id",
+                  span: span(56, 57),
+                  ty: { kind: "var", id: h },
+                  value: "x",
+                },
+              ],
+              ty: { kind: "var", id: h },
+            },
+          },
+        },
+      ],
+    };
+
+    expect(mod).toEqual(expected_mod);
+  });
 });
