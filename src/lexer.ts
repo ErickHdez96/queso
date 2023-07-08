@@ -52,6 +52,8 @@ export function tokenize_str(input: string): Token[] {
           } else {
             tok = { span: span(lo, l.offset), kind: "id", value };
           }
+        } else if (c === "\0" && at_eof(l)) {
+          continue;
         } else {
           tok = { span: span(lo, l.offset), kind: "unknown", value: c };
         }

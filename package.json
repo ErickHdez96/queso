@@ -5,7 +5,8 @@
   "author": "Erick Hernandez Curiel <erick@hernandezcuriel.dev>",
   "license": "MIT",
   "scripts": {
-    "build": "tsc",
+    "compile": "build/index.js",
+    "build": "tsc && chmod +x build/index.js",
     "lint": "eslint .",
     "fmt": "prettier src -w",
     "test": "jest"

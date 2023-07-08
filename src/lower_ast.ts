@@ -13,8 +13,8 @@ import {
   tyvar,
 } from "./ty";
 
-type TyEnv = Env<Ty>;
-type ValEnv = Env<Value>;
+export type TyEnv = Env<Ty>;
+export type ValEnv = Env<Value>;
 
 function clone_value<T>(o: T): T {
   switch (typeof o) {
@@ -232,11 +232,11 @@ class InferEngine {
   }
 }
 
-interface Value {
+export interface Value {
   ty: Ty;
 }
 
-function build_builtin_types(): TyEnv {
+export function build_builtin_types(): TyEnv {
   const builtin_types: TyEnv = new Env();
   builtin_types.mapping = {
     number: Types.number,
@@ -246,7 +246,7 @@ function build_builtin_types(): TyEnv {
 }
 export const builtin_types = build_builtin_types();
 
-function build_builtin_values(): ValEnv {
+export function build_builtin_values(): ValEnv {
   const builtin_values: ValEnv = new Env();
   const generics = [tyvar(), tyvar(), tyvar()] as const;
   builtin_values.mapping = {
@@ -321,9 +321,17 @@ function build_builtin_values(): ValEnv {
 }
 export const builtin_values = build_builtin_values();
 
-export function lower_mod(mod: ast.Mod): [TyEnv, ValEnv, hir.Mod] {
-  const tenv: TyEnv = builtin_types.new_child();
-  const venv: ValEnv = builtin_values.new_child();
+export function lower_mod(
+  mod: ast.Mod,
+  tenv?: TyEnv,
+  venv?: ValEnv
+): [TyEnv, ValEnv, hir.Mod] {
+  if (tenv === undefined) {
+    tenv = builtin_types.new_child();
+  }
+  if (venv === undefined) {
+    venv = builtin_values.new_child();
+  }
   const infer_engine = new InferEngine();
   const items: hir.Item[] = [];
 
@@ -359,11 +367,18 @@ function lower_item(
         ty: val.ty,
       });
       infer_engine.solve_constraints();
+      const body = infer_engine.substitute_expr(val);
+      if (body.kind !== "function") {
+        throw new SpanError(
+          item.span,
+          `Expected a function, found a ${body.kind}`
+        );
+      }
       return {
-        kind: "define",
+        kind: "function",
         name: item.name,
         span: item.span,
-        body: infer_engine.substitute_expr(val),
+        body,
       };
     }
   }

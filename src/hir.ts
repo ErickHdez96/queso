@@ -6,10 +6,17 @@ export interface Mod {
   items: Item[];
 }
 
-export type Item = DefineItem;
+export type Item = FunctionItem;
 
-export interface DefineItem {
-  kind: "define";
+export interface FunctionItem {
+  kind: "function";
+  span: Span;
+  name: Ident;
+  body: FunctionExpr;
+}
+
+export interface StaticItem {
+  kind: "static";
   span: Span;
   name: Ident;
   body: Expr;

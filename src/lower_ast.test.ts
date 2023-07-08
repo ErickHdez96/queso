@@ -6,90 +6,100 @@ import { span } from "./common";
 
 const lmod = (s: string) => lower_mod(parse_str(s));
 
-test("lower_mod simple inference", () => {
-  {
-    const [_tenv, venv, mod] = lmod("(define a 3)");
-    expect(venv.get("a")?.ty).toEqual(Types.number);
+describe("lower_mod simple inference", () => {
+  test("number", () => {
+    const [_tenv, venv, mod] = lmod("(define a (λ () 3))");
+    expect(venv.get("a")?.ty).toEqual({
+      kind: "forall",
+      generics: [],
+      scheme: {
+        kind: "fn",
+        parameters: [],
+        result: Types.number,
+      },
+    });
     expect(mod).toEqual({
-      span: span(0, 12),
+      span: span(0, 19),
       items: [
         {
-          kind: "define",
-          span: span(0, 12),
+          kind: "function",
+          span: span(0, 19),
           name: {
             span: span(8, 9),
             value: "a",
           },
           body: {
-            kind: "number",
-            span: span(10, 11),
-            value: "3",
-            ty: Types.number,
+            kind: "function",
+            span: span(10, 18),
+            body: [],
+            parameters: [],
+            retexpr: {
+              kind: "number",
+              span: span(16, 17),
+              ty: Types.number,
+              value: "3",
+            },
+            ty: {
+              kind: "forall",
+              generics: [],
+              scheme: {
+                kind: "fn",
+                parameters: [],
+                result: Types.number,
+              },
+            },
           },
         },
       ],
     });
-  }
-  {
-    const [_tenv, venv, mod] = lmod("(define a #t)");
-    expect(venv.get("a")?.ty).toEqual(Types.boolean);
+  });
+
+  test("boolean", () => {
+    const [_tenv, venv, mod] = lmod("(define a (λ () #t))");
+    expect(venv.get("a")?.ty).toEqual({
+      kind: "forall",
+      generics: [],
+      scheme: {
+        kind: "fn",
+        parameters: [],
+        result: Types.boolean,
+      },
+    });
     expect(mod).toEqual({
-      span: span(0, 13),
+      span: span(0, 20),
       items: [
         {
-          kind: "define",
-          span: span(0, 13),
+          kind: "function",
+          span: span(0, 20),
           name: {
             span: span(8, 9),
             value: "a",
           },
           body: {
-            kind: "boolean",
-            span: span(10, 12),
-            value: true,
-            ty: Types.boolean,
+            kind: "function",
+            span: span(10, 19),
+            body: [],
+            parameters: [],
+            retexpr: {
+              kind: "boolean",
+              span: span(16, 18),
+              ty: Types.boolean,
+              value: true,
+            },
+            ty: {
+              kind: "forall",
+              generics: [],
+              scheme: {
+                kind: "fn",
+                parameters: [],
+                result: Types.boolean,
+              },
+            },
           },
         },
       ],
     });
-  }
-  {
-    const [_tenv, venv, mod] = lmod("(define a 3) (define b a)");
-    expect(venv.get("b")?.ty).toEqual(Types.number);
-    expect(mod).toEqual({
-      span: span(0, 25),
-      items: [
-        {
-          kind: "define",
-          span: span(0, 12),
-          name: {
-            span: span(8, 9),
-            value: "a",
-          },
-          body: {
-            kind: "number",
-            span: span(10, 11),
-            value: "3",
-            ty: Types.number,
-          },
-        },
-        {
-          kind: "define",
-          span: span(13, 25),
-          name: {
-            span: span(21, 22),
-            value: "b",
-          },
-          body: {
-            kind: "id",
-            span: span(23, 24),
-            value: "a",
-            ty: Types.number,
-          },
-        },
-      ],
-    });
-  }
+  });
 });
 
 describe("lower_mod lambda inference", () => {
@@ -122,7 +132,7 @@ describe("lower_mod lambda inference", () => {
       span: span(0, 20),
       items: [
         {
-          kind: "define",
+          kind: "function",
           span: span(0, 20),
           name: {
             span: span(8, 9),
@@ -187,7 +197,7 @@ describe("lower_mod lambda inference", () => {
       span: span(0, 34),
       items: [
         {
-          kind: "define",
+          kind: "function",
           span: span(0, 34),
           name: {
             span: span(8, 9),
@@ -303,7 +313,7 @@ describe("lower_mod lambda inference", () => {
       span: span(7, 131),
       items: [
         {
-          kind: "define",
+          kind: "function",
           name: {
             span: span(15, 17),
             value: "id",
@@ -343,7 +353,7 @@ describe("lower_mod lambda inference", () => {
           },
         },
         {
-          kind: "define",
+          kind: "function",
           name: {
             span: span(43, 44),
             value: "a",
@@ -497,7 +507,7 @@ describe("lower_mod lambda inference", () => {
       span: span(7, 60),
       items: [
         {
-          kind: "define",
+          kind: "function",
           name: {
             span: span(15, 17),
             value: "id",
@@ -537,7 +547,7 @@ describe("lower_mod lambda inference", () => {
           },
         },
         {
-          kind: "define",
+          kind: "function",
           name: {
             span: span(43, 44),
             value: "a",
