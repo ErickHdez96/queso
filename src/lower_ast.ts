@@ -12,60 +12,12 @@ import {
   ty_str,
   tyvar,
 } from "./ty";
-
-export type TyEnv = Env<Ty>;
-export type ValEnv = Env<Value>;
-
-function clone_value<T>(o: T): T {
-  switch (typeof o) {
-    case "object": {
-      if (o === null) {
-        return o;
-      }
-      if (Array.isArray(o)) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return o.map((e) => clone_value(e)) as T;
-      }
-      const new_o = {} as T;
-      for (const [key, value] of Object.entries(o)) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-        (new_o as any)[key] = clone_value(value);
-      }
-      return new_o;
-    }
-    default:
-      return o;
-  }
-}
-
-class Env<T> {
-  mapping: Record<string, T> = {};
-  parent: Env<T> | undefined = undefined;
-
-  new_child(): Env<T> {
-    const e = new Env<T>();
-    e.parent = this;
-    return e;
-  }
-
-  insert(key: string, val: T) {
-    this.mapping[key] = val;
-  }
-
-  get(key: string): T | undefined {
-    if (key in this.mapping) {
-      return this.mapping[key];
-    }
-    return this.parent?.get(key);
-  }
-
-  clone_self(): Env<T> {
-    const new_env = new Env<T>();
-    new_env.parent = this.parent;
-    new_env.mapping = clone_value(this.mapping);
-    return new_env;
-  }
-}
+import {
+  TyEnv,
+  ValEnv,
+  build_builtin_types,
+  build_builtin_values,
+} from "./builtins";
 
 type Constraint = EqConstraint;
 
@@ -232,93 +184,7 @@ class InferEngine {
   }
 }
 
-export interface Value {
-  ty: Ty;
-}
-
-export function build_builtin_types(): TyEnv {
-  const builtin_types: TyEnv = new Env();
-  builtin_types.mapping = {
-    number: Types.number,
-    boolean: Types.boolean,
-  };
-  return builtin_types;
-}
 export const builtin_types = build_builtin_types();
-
-export function build_builtin_values(): ValEnv {
-  const builtin_values: ValEnv = new Env();
-  const generics = [tyvar(), tyvar(), tyvar()] as const;
-  builtin_values.mapping = {
-    debug: {
-      ty: {
-        kind: "forall",
-        generics: [generics[0].id],
-        scheme: {
-          kind: "fn",
-          parameters: [generics[0]],
-          result: generics[0],
-        },
-      },
-    },
-    log: {
-      ty: {
-        kind: "forall",
-        generics: [generics[1].id],
-        scheme: {
-          kind: "fn",
-          parameters: [generics[1]],
-          result: Types.unit,
-        },
-      },
-    },
-    "+": {
-      ty: {
-        kind: "forall",
-        generics: [],
-        scheme: {
-          kind: "fn",
-          parameters: [Types.number, Types.number],
-          result: Types.number,
-        },
-      },
-    },
-    "=": {
-      ty: {
-        kind: "forall",
-        generics: [generics[2].id],
-        scheme: {
-          kind: "fn",
-          parameters: [generics[2], generics[2]],
-          result: Types.boolean,
-        },
-      },
-    },
-    iszero: {
-      ty: {
-        kind: "forall",
-        generics: [],
-        scheme: {
-          kind: "fn",
-          parameters: [Types.number],
-          result: Types.boolean,
-        },
-      },
-    },
-    and: {
-      ty: {
-        kind: "forall",
-        generics: [],
-        scheme: {
-          kind: "fn",
-          parameters: [Types.boolean, Types.boolean],
-          result: Types.boolean,
-        },
-      },
-    },
-  };
-  return builtin_values;
-}
 export const builtin_values = build_builtin_values();
 
 export function lower_mod(

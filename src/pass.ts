@@ -1,16 +1,16 @@
 import * as ast from "./ast";
 import * as hir from "./hir";
 import * as cps from "./cps";
+import { lower_mod } from "./lower_ast";
+import { parse_str } from "./parser";
+import fs from "fs";
+import { lower_hir } from "./lower_hir";
 import {
   TyEnv,
   ValEnv,
   build_builtin_types,
   build_builtin_values,
-  lower_mod,
-} from "./lower_ast";
-import { parse_str } from "./parser";
-import fs from "fs";
-import { lower_hir } from "./lower_hir";
+} from "./builtins";
 
 export interface PassInterfaceRequired {
   path: string;
