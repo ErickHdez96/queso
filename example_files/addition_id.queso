@@ -1,0 +1,4 @@
+(define id (λ (x) x))
+(define add-two (λ (x y)
+                   (+ (id x)
+                      (id y))))

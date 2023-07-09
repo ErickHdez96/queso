@@ -1,5 +1,6 @@
 import * as ast from "./ast";
 import * as hir from "./hir";
+import * as cps from "./cps";
 import {
   TyEnv,
   ValEnv,
@@ -9,6 +10,7 @@ import {
 } from "./lower_ast";
 import { parse_str } from "./parser";
 import fs from "fs";
+import { lower_hir } from "./lower_hir";
 
 export interface PassInterfaceRequired {
   path: string;
@@ -17,6 +19,7 @@ export interface PassInterfaceRequired {
   tyenv: TyEnv;
   valenv: ValEnv;
   hir: hir.Mod;
+  cps: cps.CExpr;
 }
 
 export type PassInterface = Partial<PassInterfaceRequired>;
@@ -33,14 +36,16 @@ export const pass_parse_package_from_string: Pass = (input) => ({
   ast: parse_str(get_pass_input(input, "string")),
 });
 
+const builtin_types = build_builtin_types();
 export const pass_append_builtin_tyenv: Pass = (input) => ({
   ...input,
-  tyenv: build_builtin_types().new_child(),
+  tyenv: builtin_types.new_child(),
 });
 
+const builtin_values = build_builtin_values();
 export const pass_append_builtin_valenv: Pass = (input) => ({
   ...input,
-  valenv: build_builtin_values().new_child(),
+  valenv: builtin_values.new_child(),
 });
 
 export const pass_lower_ast: Pass = (input) => {
@@ -55,6 +60,10 @@ export const pass_lower_ast: Pass = (input) => {
     hir: mod,
   };
 };
+
+export const pass_lower_hir: Pass = (input) => ({
+  cps: lower_hir(get_pass_input(input, "hir")),
+});
 
 function get_pass_input<T extends keyof PassInterfaceRequired>(
   input: PassInterface,

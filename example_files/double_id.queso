@@ -1,0 +1,3 @@
+(define id (λ (x) x))
+(define double-id
+        (λ (x) (id (id x))))

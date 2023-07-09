@@ -1,0 +1,2 @@
+(define two (λ () 2))
+(define call-two (λ () (two)))

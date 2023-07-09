@@ -6,6 +6,7 @@ import {
   pass_append_builtin_tyenv,
   pass_append_builtin_valenv as pass_append_builtin_valenv,
   pass_lower_ast,
+  pass_lower_hir,
   pass_parse_package_from_string,
   pass_read_path,
 } from "./pass";
@@ -55,6 +56,7 @@ function main() {
     .pass(pass_append_builtin_tyenv)
     .pass(pass_append_builtin_valenv)
     .pass(pass_lower_ast)
+    .pass(pass_lower_hir)
     .build();
 
   const result = compiler.run_on_path(cmd.input_path);
