@@ -1,0 +1,2 @@
+(define error-add (λ (x y) (+)))
+(define error-add (λ (x y) (+ x)))

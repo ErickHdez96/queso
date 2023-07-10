@@ -21,7 +21,7 @@ beforeEach(() => {
     .build();
 });
 
-describe("lower_hir simple functions", () => {
+describe("simple functions", () => {
   test("number", () => {
     const result = compiler.run_on_string("(define constant (λ () 3))");
     expect(result.cps).toEqual(
@@ -93,27 +93,17 @@ describe("lower_hir simple functions", () => {
           [
             "add",
             ["x", "y", "@@k-3"],
-            cps.fix(
+            cps.primop(
+              cps.PrimOp["+"],
+              [cps.vvar("x", span(24, 25)), cps.vvar("y", span(26, 27))],
+              ["@@x-0"],
               [
-                [
-                  "@@k-4",
-                  ["@@x-0"],
-                  cps.app(
-                    cps.vvar("@@k-3", span(12, 29)),
-                    [cps.vvar("@@x-0", span(21, 28))],
-                    span(12, 29)
-                  ),
-                ],
+                cps.app(
+                  cps.vvar("@@k-3", span(12, 29)),
+                  [cps.vvar("@@x-0", span(21, 28))],
+                  span(12, 29)
+                ),
               ],
-              cps.app(
-                cps.vvar("+", span(22, 23)),
-                [
-                  cps.vvar("x", span(24, 25)),
-                  cps.vvar("y", span(26, 27)),
-                  cps.vvar("@@k-4", span(21, 28)),
-                ],
-                span(22, 23)
-              ),
               span(21, 28)
             ),
           ],
@@ -133,14 +123,14 @@ describe("lower_hir simple functions", () => {
         [
           [
             "double-call",
-            ["x", "@@k-5"],
+            ["x", "@@k-4"],
             cps.fix(
               [
                 [
-                  "@@k-6",
+                  "@@k-5",
                   ["@@x-1"],
                   cps.app(
-                    cps.vvar("@@k-5", span(20, 45)),
+                    cps.vvar("@@k-4", span(20, 45)),
                     [cps.vvar("@@x-1", span(27, 44))],
                     span(20, 45)
                   ),
@@ -149,13 +139,13 @@ describe("lower_hir simple functions", () => {
               cps.fix(
                 [
                   [
-                    "@@k-7",
+                    "@@k-6",
                     ["@@x-2"],
                     cps.app(
                       cps.vvar("debug", span(28, 33)),
                       [
                         cps.vvar("@@x-2", span(34, 43)),
-                        cps.vvar("@@k-6", span(27, 44)),
+                        cps.vvar("@@k-5", span(27, 44)),
                       ],
                       span(28, 33)
                     ),
@@ -165,7 +155,7 @@ describe("lower_hir simple functions", () => {
                   cps.vvar("debug", span(35, 40)),
                   [
                     cps.vvar("x", span(41, 42)),
-                    cps.vvar("@@k-7", span(34, 43)),
+                    cps.vvar("@@k-6", span(34, 43)),
                   ],
                   span(35, 40)
                 ),

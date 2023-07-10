@@ -5,12 +5,7 @@ import { lower_mod } from "./lower_ast";
 import { parse_str } from "./parser";
 import fs from "fs";
 import { lower_hir } from "./lower_hir";
-import {
-  TyEnv,
-  ValEnv,
-  build_builtin_types,
-  build_builtin_values,
-} from "./builtins";
+import { TyEnv, ValEnv, builtin_types, builtin_values } from "./builtins";
 
 export interface PassInterfaceRequired {
   path: string;
@@ -36,13 +31,11 @@ export const pass_parse_package_from_string: Pass = (input) => ({
   ast: parse_str(get_pass_input(input, "string")),
 });
 
-const builtin_types = build_builtin_types();
 export const pass_append_builtin_tyenv: Pass = (input) => ({
   ...input,
   tyenv: builtin_types.new_child(),
 });
 
-const builtin_values = build_builtin_values();
 export const pass_append_builtin_valenv: Pass = (input) => ({
   ...input,
   valenv: builtin_values.new_child(),

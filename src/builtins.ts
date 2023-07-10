@@ -8,6 +8,7 @@ export interface Value {
   ty: Ty;
 }
 
+export const builtin_types = build_builtin_types();
 export function build_builtin_types(): TyEnv {
   const builtin_types: TyEnv = new Env();
   builtin_types.mapping = {
@@ -17,6 +18,7 @@ export function build_builtin_types(): TyEnv {
   return builtin_types;
 }
 
+export const builtin_values = build_builtin_values();
 export function build_builtin_values(): ValEnv {
   const builtin_values: ValEnv = new Env();
   const generics = [tyvar(), tyvar(), tyvar()] as const;
@@ -27,6 +29,8 @@ export function build_builtin_values(): ValEnv {
         generics: [generics[0].id],
         scheme: {
           kind: "fn",
+          id: Symbol("debug"),
+          instantiations: [],
           parameters: [generics[0]],
           result: generics[0],
         },
@@ -38,6 +42,8 @@ export function build_builtin_values(): ValEnv {
         generics: [generics[1].id],
         scheme: {
           kind: "fn",
+          id: Symbol("log"),
+          instantiations: [],
           parameters: [generics[1]],
           result: Types.unit,
         },
@@ -49,6 +55,8 @@ export function build_builtin_values(): ValEnv {
         generics: [],
         scheme: {
           kind: "fn",
+          id: Symbol("+"),
+          instantiations: [],
           parameters: [Types.number, Types.number],
           result: Types.number,
         },
@@ -60,6 +68,8 @@ export function build_builtin_values(): ValEnv {
         generics: [generics[2].id],
         scheme: {
           kind: "fn",
+          id: Symbol("="),
+          instantiations: [],
           parameters: [generics[2], generics[2]],
           result: Types.boolean,
         },
@@ -71,6 +81,8 @@ export function build_builtin_values(): ValEnv {
         generics: [],
         scheme: {
           kind: "fn",
+          id: Symbol("iszero"),
+          instantiations: [],
           parameters: [Types.number],
           result: Types.boolean,
         },
@@ -82,6 +94,8 @@ export function build_builtin_values(): ValEnv {
         generics: [],
         scheme: {
           kind: "fn",
+          id: Symbol("and"),
+          instantiations: [],
           parameters: [Types.boolean, Types.boolean],
           result: Types.boolean,
         },

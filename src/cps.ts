@@ -36,7 +36,7 @@ export interface BooleanValue {
   value: boolean;
 }
 
-export type CExpr = AppCExpr | FixCExpr;
+export type CExpr = AppCExpr | FixCExpr | PrimOpCExpr;
 
 export interface AppCExpr {
   kind: "app";
@@ -58,15 +58,23 @@ export interface SwitchCExpr {
   value: Value;
   branches: CExpr[];
 }
+*/
 
 export interface PrimOpCExpr {
   kind: "primop";
+  span: Span;
   primop: PrimOp;
   args: Value[];
   results: string[];
   branches: CExpr[];
 }
-*/
+
+export const PrimOp = {
+  "+": "+",
+} as const;
+export type PrimOp = {
+  [K in keyof typeof PrimOp]: (typeof PrimOp)[K];
+}[keyof typeof PrimOp];
 
 export const fix = (fns: FixCExpr["fns"], cexpr: CExpr, span: Span): CExpr => ({
   kind: "fix",
@@ -80,6 +88,21 @@ export const app = (fn: Value, args: Value[], span: Span): CExpr => ({
   span,
   fn,
   args,
+});
+
+export const primop = (
+  primop: PrimOp,
+  args: Value[],
+  results: string[],
+  branches: CExpr[],
+  span: Span
+): CExpr => ({
+  kind: "primop",
+  span,
+  primop,
+  args,
+  results,
+  branches,
 });
 
 export const vvar = (value: string, span: Span): Value => ({

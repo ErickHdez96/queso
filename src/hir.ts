@@ -1,5 +1,6 @@
+import { builtin_values } from "./builtins";
 import { Span } from "./common";
-import { Ty, UnitTy, ConstantTy, InstTy } from "./ty";
+import { UnitTy, ConstantTy, InstTy, TyScheme } from "./ty";
 
 export interface Mod {
   span: Span;
@@ -15,15 +16,9 @@ export interface FunctionItem {
   body: FunctionExpr;
 }
 
-export interface StaticItem {
-  kind: "static";
-  span: Span;
-  name: Ident;
-  body: Expr;
-}
-
 export type Expr =
   | UnitExpr
+  | BinaryOpExpr
   | BooleanExpr
   | NumberExpr
   | IdExpr
@@ -57,6 +52,15 @@ export interface IdExpr {
   ty: InstTy;
 }
 
+export interface BinaryOpExpr {
+  kind: "binaryop";
+  span: Span;
+  op: "+";
+  left: Expr;
+  right: Expr;
+  ty: InstTy;
+}
+
 export interface ApplicationExpr {
   kind: "application";
   span: Span;
@@ -68,7 +72,7 @@ export interface ApplicationExpr {
 export interface FunctionExpr {
   kind: "function";
   span: Span;
-  ty: Ty;
+  ty: TyScheme;
   parameters: [Ident, InstTy][];
   body: Expr[];
   retexpr: Expr;
@@ -77,4 +81,24 @@ export interface FunctionExpr {
 export interface Ident {
   span: Span;
   value: string;
+}
+
+export const try_to_binary_op = (e: Expr): BinaryOpExpr["op"] | undefined => {
+  if (e.kind === "id") {
+    const e_ty = e.ty;
+    const builtin_ty = builtin_values.get(e.value)?.ty;
+    if (
+      is_binary_op(e.value) &&
+      e_ty.kind === "fn" &&
+      builtin_ty?.kind === "forall" &&
+      e_ty.id === builtin_ty.scheme.id
+    ) {
+      return e.value;
+    }
+  }
+  return undefined;
+};
+
+function is_binary_op(op: string): op is BinaryOpExpr["op"] {
+  return op === "+";
 }

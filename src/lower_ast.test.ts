@@ -1,24 +1,58 @@
 import * as hir from "./hir";
-import { parse_str } from "./parser";
-import { lower_mod } from "./lower_ast";
-import { TyScheme, Types } from "./ty";
+import { FunctionTy, InstTy, TyScheme, Types } from "./ty";
 import { span } from "./common";
+import { Compiler, CompilerBuilder } from "./compiler";
+import {
+  PassInterface,
+  pass_append_builtin_tyenv,
+  pass_append_builtin_valenv,
+  pass_lower_ast,
+  pass_parse_package_from_string,
+} from "./pass";
 
-const lmod = (s: string) => lower_mod(parse_str(s));
+let compiler!: Compiler;
 
-describe("lower_mod simple inference", () => {
+function get_fnty(result: PassInterface, name: string): FunctionTy {
+  const fnty = (result.valenv?.get(name)?.ty as TyScheme | undefined)?.scheme;
+  if (fnty === undefined) {
+    throw new Error(`Expected to find fn ty for ${name}`);
+  }
+  return fnty;
+}
+
+function get_id(result: PassInterface, name: string): symbol {
+  return get_fnty(result, name).id;
+}
+
+function get_insts(result: PassInterface, name: string): InstTy[][] {
+  return get_fnty(result, name).instantiations;
+}
+
+beforeEach(() => {
+  compiler = new CompilerBuilder()
+    .pass(pass_parse_package_from_string)
+    .pass(pass_append_builtin_tyenv)
+    .pass(pass_append_builtin_valenv)
+    .pass(pass_lower_ast)
+    .build();
+});
+
+describe("simple inference", () => {
   test("number", () => {
-    const [_tenv, venv, mod] = lmod("(define a (λ () 3))");
-    expect(venv.get("a")?.ty).toEqual({
+    const result = compiler.run_on_string("(define a (λ () 3))");
+    const a_id = get_id(result, "a");
+    expect(result.valenv!.get("a")?.ty).toEqual({
       kind: "forall",
       generics: [],
       scheme: {
         kind: "fn",
+        id: a_id,
+        instantiations: [],
         parameters: [],
         result: Types.number,
       },
     });
-    expect(mod).toEqual({
+    expect(result.hir).toEqual({
       span: span(0, 19),
       items: [
         {
@@ -44,6 +78,8 @@ describe("lower_mod simple inference", () => {
               generics: [],
               scheme: {
                 kind: "fn",
+                id: a_id,
+                instantiations: [],
                 parameters: [],
                 result: Types.number,
               },
@@ -55,17 +91,20 @@ describe("lower_mod simple inference", () => {
   });
 
   test("boolean", () => {
-    const [_tenv, venv, mod] = lmod("(define a (λ () #t))");
-    expect(venv.get("a")?.ty).toEqual({
+    const result = compiler.run_on_string("(define a (λ () #t))");
+    const a_id = get_id(result, "a");
+    expect(result.valenv!.get("a")?.ty).toEqual({
       kind: "forall",
       generics: [],
       scheme: {
         kind: "fn",
+        id: a_id,
+        instantiations: [],
         parameters: [],
         result: Types.boolean,
       },
     });
-    expect(mod).toEqual({
+    expect(result.hir).toEqual({
       span: span(0, 20),
       items: [
         {
@@ -91,6 +130,8 @@ describe("lower_mod simple inference", () => {
               generics: [],
               scheme: {
                 kind: "fn",
+                id: a_id,
+                instantiations: [],
                 parameters: [],
                 result: Types.boolean,
               },
@@ -102,19 +143,75 @@ describe("lower_mod simple inference", () => {
   });
 });
 
-describe("lower_mod lambda inference", () => {
+describe("binary_operator", () => {
+  test("+", () => {
+    const result = compiler.run_on_string("(define add-ones (λ () (+ 1 1)))");
+    const add_ones_id = get_id(result, "add-ones");
+    expect(result.hir?.items).toEqual([
+      {
+        kind: "function",
+        name: {
+          span: span(8, 16),
+          value: "add-ones",
+        },
+        span: span(0, 32),
+        body: {
+          kind: "function",
+          span: span(17, 31),
+          parameters: [],
+          body: [],
+          retexpr: {
+            kind: "binaryop",
+            span: span(23, 30),
+            op: "+",
+            left: {
+              kind: "number",
+              span: span(26, 27),
+              ty: Types.number,
+              value: "1",
+            },
+            right: {
+              kind: "number",
+              span: span(28, 29),
+              ty: Types.number,
+              value: "1",
+            },
+            ty: Types.number,
+          },
+          ty: {
+            kind: "forall",
+            generics: [],
+            scheme: {
+              kind: "fn",
+              instantiations: [],
+              id: add_ones_id,
+              parameters: [],
+              result: Types.number,
+            },
+          },
+        },
+      },
+    ]);
+  });
+});
+
+describe("lambda inference", () => {
   test("id", () => {
-    const [_tenv, venv, mod] = lmod("(define a (λ (x) x))");
+    const result = compiler.run_on_string("(define a (λ (x) x))");
+    const venv = result.valenv!;
     const l = venv.get("a")!;
     expect(l).toBeDefined();
     expect(l.ty).toHaveProperty("generics");
     expect((l.ty as TyScheme).generics).toHaveLength(1);
     const g = (l.ty as TyScheme).generics[0]!;
+    const a_id = get_id(result, "a");
     expect(l.ty).toEqual({
       generics: [g],
       kind: "forall",
       scheme: {
         kind: "fn",
+        id: a_id,
+        instantiations: [],
         parameters: [
           {
             id: g,
@@ -128,7 +225,7 @@ describe("lower_mod lambda inference", () => {
       },
     });
 
-    expect(mod).toEqual({
+    expect(result.hir).toEqual({
       span: span(0, 20),
       items: [
         {
@@ -146,6 +243,8 @@ describe("lower_mod lambda inference", () => {
               generics: [g],
               scheme: {
                 kind: "fn",
+                id: a_id,
+                instantiations: [],
                 parameters: [
                   {
                     kind: "var",
@@ -187,11 +286,14 @@ describe("lower_mod lambda inference", () => {
   });
 
   test("(= (+ x 1) y)", () => {
-    const [_tenv, venv, mod] = lmod("(define a (λ (x y) (= (+ x 1) y)))");
+    const result = compiler.run_on_string("(define a (λ (x y) (= (+ x 1) y)))");
+    const venv = result.valenv!;
     const l = venv.get("a")!;
     expect(l).toBeDefined();
     expect(l.ty).toHaveProperty("generics");
     expect((l.ty as TyScheme).generics).toHaveLength(0);
+    const a_id = get_id(result, "a");
+    const eq_id = get_id(result, "=");
 
     const expected_mod: hir.Mod = {
       span: span(0, 34),
@@ -211,6 +313,8 @@ describe("lower_mod lambda inference", () => {
               generics: [],
               scheme: {
                 kind: "fn",
+                id: a_id,
+                instantiations: [],
                 parameters: [Types.number, Types.number],
                 result: Types.boolean,
               },
@@ -242,39 +346,30 @@ describe("lower_mod lambda inference", () => {
                 value: "=",
                 ty: {
                   kind: "fn",
+                  id: eq_id,
+                  instantiations: [[Types.number]!],
                   parameters: [Types.number, Types.number],
                   result: Types.boolean,
                 },
               },
               args: [
                 {
-                  kind: "application",
+                  kind: "binaryop",
                   span: span(22, 29),
+                  op: "+",
                   ty: Types.number,
-                  fn: {
+                  left: {
                     kind: "id",
-                    span: span(23, 24),
-                    ty: {
-                      kind: "fn",
-                      parameters: [Types.number, Types.number],
-                      result: Types.number,
-                    },
-                    value: "+",
+                    span: span(25, 26),
+                    value: "x",
+                    ty: Types.number,
                   },
-                  args: [
-                    {
-                      kind: "id",
-                      span: span(25, 26),
-                      ty: Types.number,
-                      value: "x",
-                    },
-                    {
-                      kind: "number",
-                      span: span(27, 28),
-                      ty: Types.number,
-                      value: "1",
-                    },
-                  ],
+                  right: {
+                    kind: "number",
+                    span: span(27, 28),
+                    value: "1",
+                    ty: Types.number,
+                  },
                 },
                 {
                   kind: "id",
@@ -289,15 +384,16 @@ describe("lower_mod lambda inference", () => {
       ],
     };
 
-    expect(mod).toEqual(expected_mod);
+    expect(result.hir).toStrictEqual(expected_mod);
   });
 
   test("(and (iszero (+ (id x) 1)) y)", () => {
-    const [_tenv, venv, mod] = lmod(`
+    const result = compiler.run_on_string(`
       (define id (λ (x) x))
       (define a (λ (x y)
                   (and (iszero (+ (id x) 1))
                        (id y))))`);
+    const venv = result.valenv!;
     const id = venv.get("id")!;
     expect(id).toBeDefined();
     expect(id.ty).toHaveProperty("generics");
@@ -308,6 +404,10 @@ describe("lower_mod lambda inference", () => {
     expect(l).toBeDefined();
     expect(l.ty).toHaveProperty("generics");
     expect((l.ty as TyScheme).generics).toHaveLength(0);
+    const id_id = get_id(result, "id");
+    const iszero_id = get_id(result, "iszero");
+    const and_id = get_id(result, "and");
+    const a_id = get_id(result, "a");
 
     const expected_mod: hir.Mod = {
       span: span(7, 131),
@@ -327,6 +427,8 @@ describe("lower_mod lambda inference", () => {
               generics: [g],
               scheme: {
                 kind: "fn",
+                id: id_id,
+                instantiations: [[Types.number], [Types.boolean]],
                 parameters: [{ kind: "var", id: g }],
                 result: { kind: "var", id: g },
               },
@@ -368,6 +470,8 @@ describe("lower_mod lambda inference", () => {
               generics: [],
               scheme: {
                 kind: "fn",
+                id: a_id,
+                instantiations: [],
                 parameters: [Types.number, Types.boolean],
                 result: Types.boolean,
               },
@@ -384,6 +488,8 @@ describe("lower_mod lambda inference", () => {
                 value: "and",
                 ty: {
                   kind: "fn",
+                  id: and_id,
+                  instantiations: [],
                   parameters: [Types.boolean, Types.boolean],
                   result: Types.boolean,
                 },
@@ -400,56 +506,49 @@ describe("lower_mod lambda inference", () => {
                     value: "iszero",
                     ty: {
                       kind: "fn",
+                      id: iszero_id,
+                      instantiations: [],
                       parameters: [Types.number],
                       result: Types.boolean,
                     },
                   },
                   args: [
                     {
-                      kind: "application",
+                      kind: "binaryop",
                       span: span(85, 97),
+                      op: "+",
                       ty: Types.number,
-                      fn: {
-                        kind: "id",
-                        span: span(86, 87),
-                        ty: {
-                          kind: "fn",
-                          parameters: [Types.number, Types.number],
-                          result: Types.number,
-                        },
-                        value: "+",
-                      },
-                      args: [
-                        {
-                          kind: "application",
-                          span: span(88, 94),
-                          ty: Types.number,
-                          fn: {
-                            kind: "id",
-                            span: span(89, 91),
-                            ty: {
-                              kind: "fn",
-                              parameters: [Types.number],
-                              result: Types.number,
-                            },
-                            value: "id",
+                      left: {
+                        kind: "application",
+                        span: span(88, 94),
+                        ty: Types.number,
+                        fn: {
+                          kind: "id",
+                          span: span(89, 91),
+                          ty: {
+                            kind: "fn",
+                            id: id_id,
+                            instantiations: [[Types.number], [Types.boolean]],
+                            parameters: [Types.number],
+                            result: Types.number,
                           },
-                          args: [
-                            {
-                              kind: "id",
-                              span: span(92, 93),
-                              ty: Types.number,
-                              value: "x",
-                            },
-                          ],
+                          value: "id",
                         },
-                        {
-                          kind: "number",
-                          span: span(95, 96),
-                          ty: Types.number,
-                          value: "1",
-                        },
-                      ],
+                        args: [
+                          {
+                            kind: "id",
+                            span: span(92, 93),
+                            ty: Types.number,
+                            value: "x",
+                          },
+                        ],
+                      },
+                      right: {
+                        kind: "number",
+                        span: span(95, 96),
+                        ty: Types.number,
+                        value: "1",
+                      },
                     },
                   ],
                 },
@@ -462,6 +561,8 @@ describe("lower_mod lambda inference", () => {
                     span: span(123, 125),
                     ty: {
                       kind: "fn",
+                      id: id_id,
+                      instantiations: [[Types.number], [Types.boolean]],
                       parameters: [Types.boolean],
                       result: Types.boolean,
                     },
@@ -484,13 +585,14 @@ describe("lower_mod lambda inference", () => {
       ],
     };
 
-    expect(mod).toEqual(expected_mod);
+    expect(result.hir).toEqual(expected_mod);
   });
 
   test("(id x)", () => {
-    const [_tenv, venv, mod] = lmod(`
+    const result = compiler.run_on_string(`
       (define id (λ (x) x))
       (define a (λ (x) (id x)))`);
+    const venv = result.valenv!;
     const id = venv.get("id")!;
     expect(id).toBeDefined();
     expect(id.ty).toHaveProperty("generics");
@@ -502,6 +604,9 @@ describe("lower_mod lambda inference", () => {
     expect(l.ty).toHaveProperty("generics");
     expect((l.ty as TyScheme).generics).toHaveLength(1);
     const h = (l.ty as TyScheme).generics[0]!;
+    const id_id = get_id(result, "id");
+    const a_id = get_id(result, "a");
+    const id_insts = get_insts(result, "id");
 
     const expected_mod: hir.Mod = {
       span: span(7, 60),
@@ -521,6 +626,8 @@ describe("lower_mod lambda inference", () => {
               generics: [g],
               scheme: {
                 kind: "fn",
+                id: id_id,
+                instantiations: [id_insts[0]!],
                 parameters: [{ kind: "var", id: g }],
                 result: { kind: "var", id: g },
               },
@@ -562,6 +669,8 @@ describe("lower_mod lambda inference", () => {
               generics: [h],
               scheme: {
                 kind: "fn",
+                id: a_id,
+                instantiations: [],
                 parameters: [{ kind: "var", id: h }],
                 result: { kind: "var", id: h },
               },
@@ -580,6 +689,8 @@ describe("lower_mod lambda inference", () => {
                 value: "id",
                 ty: {
                   kind: "fn",
+                  id: id_id,
+                  instantiations: [id_insts[0]!],
                   parameters: [{ kind: "var", id: h }],
                   result: { kind: "var", id: h },
                 },
@@ -600,6 +711,53 @@ describe("lower_mod lambda inference", () => {
       ],
     };
 
-    expect(mod).toEqual(expected_mod);
+    expect(result.hir).toEqual(expected_mod);
+  });
+});
+
+describe("binary op shadowing", () => {
+  test("+", () => {
+    const result = compiler.run_on_string(`
+      (define + (λ (x) x))
+      (define id (λ (x) (+ x)))
+    `);
+    expect(result.hir).toMatchObject({
+      items: [
+        {
+          kind: "function",
+          name: {
+            value: "+",
+          },
+          body: {
+            kind: "function",
+            parameters: [[{ value: "x" }, {}]],
+          },
+        },
+        {
+          kind: "function",
+          name: {
+            value: "id",
+          },
+          body: {
+            kind: "function",
+            parameters: [[{ value: "x" }, {}]],
+            body: [],
+            retexpr: {
+              kind: "application",
+              fn: {
+                kind: "id",
+                value: "+",
+              },
+              args: [
+                {
+                  kind: "id",
+                  value: "x",
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
   });
 });

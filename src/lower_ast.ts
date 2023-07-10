@@ -12,12 +12,7 @@ import {
   ty_str,
   tyvar,
 } from "./ty";
-import {
-  TyEnv,
-  ValEnv,
-  build_builtin_types,
-  build_builtin_values,
-} from "./builtins";
+import { TyEnv, ValEnv, builtin_types, builtin_values } from "./builtins";
 
 type Constraint = EqConstraint;
 
@@ -28,7 +23,7 @@ interface EqConstraint {
   span: Span;
 }
 
-class InferEngine {
+export class InferEngine {
   constructor(
     public substs: Record<symbol, InstTy> = {},
     public cnsts: Constraint[] = []
@@ -127,22 +122,33 @@ class InferEngine {
             return t;
           }
           return (this.substs[t.id] as T | undefined) ?? t;
-        case "fn":
-          return {
+        case "fn": {
+          const instantiations = t.instantiations;
+          for (const insts of instantiations) {
+            for (let i = 0; i < insts.length; ++i) {
+              insts[i] = inner(insts[i]!);
+            }
+          }
+          const fnty: FunctionTy = {
             kind: "fn",
+            id: t.id,
+            instantiations,
             parameters: t.parameters.map((p) => this.substitute(p)),
             result: this.substitute(t.result),
-          } as T;
+          };
+          return fnty as T;
+        }
         case "unit":
         case "constant":
           return t;
         case "forall": {
           bound = t.generics;
-          return {
+          const tyscheme: TyScheme = {
             kind: "forall",
             generics: t.generics,
             scheme: inner(t.scheme),
-          } as T;
+          };
+          return tyscheme as T;
         }
       }
     };
@@ -161,6 +167,15 @@ class InferEngine {
           kind: "id",
           span: expr.span,
           value: expr.value,
+          ty: this.substitute(expr.ty),
+        };
+      case "binaryop":
+        return {
+          kind: "binaryop",
+          span: expr.span,
+          op: expr.op,
+          left: this.substitute_expr(expr.left),
+          right: this.substitute_expr(expr.right),
           ty: this.substitute(expr.ty),
         };
       case "application":
@@ -183,9 +198,6 @@ class InferEngine {
     }
   }
 }
-
-export const builtin_types = build_builtin_types();
-export const builtin_values = build_builtin_values();
 
 export function lower_mod(
   mod: ast.Mod,
@@ -229,6 +241,9 @@ function lower_item(
   switch (item.kind) {
     case "define": {
       const val = lower_expr(item.body, tenv, venv, infer_engine);
+      if (val.kind === "function") {
+        val.ty.scheme.id = Symbol(item.name.value);
+      }
       venv.insert(item.name.value, {
         ty: val.ty,
       });
@@ -300,10 +315,38 @@ function lower_expr(
       const retty = tyvar();
       const inferred_ty: FunctionTy = {
         kind: "fn",
+        id: retty.id,
+        instantiations: [],
         parameters: args.map((a) => instantiate_ty(a.ty, infer_engine)),
         result: retty,
       };
       infer_engine.constrain("eq", fnty, inferred_ty, expr.span);
+
+      const binary_op = hir.try_to_binary_op(fn_expr);
+      if (binary_op) {
+        let e: hir.Expr = {
+          kind: "binaryop",
+          span: expr.span,
+          op: binary_op,
+          left: args[0]!,
+          right: args[1]!,
+          ty: retty,
+        };
+
+        for (let i = 2; i < args.length; ++i) {
+          e = {
+            kind: "binaryop",
+            span: expr.span,
+            op: binary_op,
+            left: e,
+            right: args[i]!,
+            ty: retty,
+          };
+        }
+
+        return e;
+      }
+
       return {
         kind: "application",
         span: expr.span,
@@ -326,6 +369,8 @@ function lower_expr(
       const resty = tyvar();
       const fnty: FunctionTy = {
         kind: "fn",
+        id: resty.id,
+        instantiations: [],
         parameters: params.map((p) => p[1]),
         result: resty,
       };
@@ -387,11 +432,18 @@ function instantiate_ty(scheme: Ty, infer_engine: InferEngine): InstTy {
   }
 
   const substs: Record<symbol, InstTy> = {};
+  const new_vartys: VariableTy[] = [];
   for (const s of scheme.generics) {
-    substs[s] = infer_engine.new_varty();
+    const varty = infer_engine.new_varty();
+    substs[s] = varty;
+    new_vartys.push(varty);
   }
 
-  return substitute_ty(scheme.scheme, substs) as FunctionTy;
+  const fty = substitute_ty(scheme.scheme, substs) as FunctionTy;
+  if (new_vartys.length) {
+    fty.instantiations.push(new_vartys);
+  }
+  return fty;
 }
 
 function free_type_variables_in_type(ty: InstTy): Set<symbol> {

@@ -66,6 +66,25 @@ function lower_expr(
         span: expr.span,
         value: expr.value,
       });
+    case "binaryop": {
+      const result_name = var_name();
+      return lower_expr(expr.left, (l) =>
+        lower_expr(expr.right, (r) => ({
+          kind: "primop",
+          span: expr.span,
+          primop: expr.op,
+          args: [l, r],
+          results: [result_name],
+          branches: [
+            c({
+              kind: "var",
+              span: expr.span,
+              value: result_name,
+            }),
+          ],
+        }))
+      );
+    }
     case "function": {
       const fn = name ?? fn_name();
       const k = cont_name();

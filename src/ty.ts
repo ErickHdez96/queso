@@ -17,6 +17,8 @@ export interface ConstantTy {
 
 export interface FunctionTy {
   kind: "fn";
+  id: symbol;
+  instantiations: InstTy[][];
   parameters: InstTy[];
   result: InstTy;
 }
@@ -65,7 +67,7 @@ function subst_ty(ty: InstTy, substs: [symbol, string][]): InstTy {
       return ty;
     case "fn":
       return {
-        kind: "fn",
+        ...ty,
         parameters: ty.parameters.map((p) => subst_ty(p, substs)),
         result: subst_ty(ty.result, substs),
       };
