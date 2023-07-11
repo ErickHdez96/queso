@@ -283,7 +283,7 @@ function lower_expr(
         kind: "number",
         span: expr.span,
         ty: Types.number,
-        value: expr.value,
+        value: parseInt(expr.value),
       };
     case "boolean":
       return {

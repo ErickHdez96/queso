@@ -41,7 +41,7 @@ export interface BooleanExpr {
 export interface NumberExpr {
   kind: "number";
   span: Span;
-  value: string;
+  value: number;
   ty: ConstantTy;
 }
 

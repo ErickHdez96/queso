@@ -6,6 +6,7 @@ import { parse_str } from "./parser";
 import fs from "fs";
 import { lower_hir } from "./lower_hir";
 import { TyEnv, ValEnv, builtin_types, builtin_values } from "./builtins";
+import { OptimizationFn } from "./optimization";
 
 export interface PassInterfaceRequired {
   path: string;
@@ -57,6 +58,12 @@ export const pass_lower_ast: Pass = (input) => {
 export const pass_lower_hir: Pass = (input) => ({
   cps: lower_hir(get_pass_input(input, "hir")),
 });
+
+export const pass_optimizations_fn =
+  (...opts: OptimizationFn[]): Pass =>
+  (input) => ({
+    cps: opts.reduce((acc, curr) => curr(acc), get_pass_input(input, "cps")),
+  });
 
 function get_pass_input<T extends keyof PassInterfaceRequired>(
   input: PassInterface,

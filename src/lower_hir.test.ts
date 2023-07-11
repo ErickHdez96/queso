@@ -32,7 +32,7 @@ describe("simple functions", () => {
             ["@@k-0"],
             cps.app(
               cps.vvar("@@k-0", span(17, 25)),
-              [cps.number("3", span(23, 24))],
+              [cps.number(3, span(23, 24))],
               span(17, 25)
             ),
           ],

@@ -27,7 +27,7 @@ export interface UnitValue {
 export interface NumberValue {
   kind: "number";
   span: Span;
-  value: string;
+  value: number;
 }
 
 export interface BooleanValue {
@@ -117,7 +117,7 @@ export const label = (value: string, span: Span): Value => ({
   value,
 });
 
-export const number = (value: string, span: Span): Value => ({
+export const number = (value: number, span: Span): Value => ({
   kind: "number",
   span,
   value,
