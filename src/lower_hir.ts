@@ -108,7 +108,7 @@ function lower_expr(
           ],
         ],
         cexpr: c({
-          kind: "var",
+          kind: "label",
           span: expr.span,
           value: fn,
         }),
@@ -139,7 +139,7 @@ function lower_expr(
             fn: f,
             args: [
               {
-                kind: "var",
+                kind: "label",
                 span: expr.span,
                 value: return_address,
               },
@@ -170,7 +170,7 @@ function lower_expr(
             args: [
               ...vals,
               {
-                kind: "var",
+                kind: "label",
                 span: expr.span,
                 value: return_address,
               },

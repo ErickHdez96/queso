@@ -145,7 +145,7 @@ describe("simple functions", () => {
                       cps.vvar("debug", span(28, 33)),
                       [
                         cps.vvar("@@x-2", span(34, 43)),
-                        cps.vvar("@@k-5", span(27, 44)),
+                        cps.label("@@k-5", span(27, 44)),
                       ],
                       span(28, 33)
                     ),
@@ -155,7 +155,7 @@ describe("simple functions", () => {
                   cps.vvar("debug", span(35, 40)),
                   [
                     cps.vvar("x", span(41, 42)),
-                    cps.vvar("@@k-6", span(34, 43)),
+                    cps.label("@@k-6", span(34, 43)),
                   ],
                   span(35, 40)
                 ),
